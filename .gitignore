@@ -60,4 +60,4 @@ Thumbs.db
 htmlcov/
 
 # mypy
-.mypy_cache/
+.mypy_cache/.serena/
