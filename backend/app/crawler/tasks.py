@@ -13,13 +13,13 @@
 import asyncio
 import random
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config import settings
 from .. import crud, schemas
-from .douyin_client import DouyinLiveClient
+from .douyin_client import DouyinLiveClient, LiveRoomInfo, LiveState
 
 
 # 初始直播间列表（可以后续改为从配置或数据库读取）
@@ -157,16 +157,41 @@ async def _crawl_other_rooms_once(
     client: DouyinLiveClient,
 ) -> None:
     """单轮采集其他酒类直播间数据（仅指标）。"""
-    for room_name, room_url in LIVE_ROOMS.items():
-        if room_name == "中国劲酒":
+    # 并发抓取：先并发获取数据，再串行落库（AsyncSession 不支持并发复用）
+    rooms: List[Tuple[str, str]] = [
+        (room_name, room_url)
+        for room_name, room_url in LIVE_ROOMS.items()
+        if room_name != "中国劲酒"
+    ]
+    if not rooms:
+        return
+
+    concurrency = max(1, int(settings.other_rooms_concurrency or 1))
+    sem = asyncio.Semaphore(concurrency)
+
+    async def _fetch_one(name: str, url: str) -> Tuple[str, str, LiveRoomInfo]:
+        async with sem:
+            info = await client.fetch_room_info(room_name=name, room_url=url)
+            return name, url, info
+
+    results = await asyncio.gather(
+        *[asyncio.create_task(_fetch_one(name, url)) for name, url in rooms],
+        return_exceptions=True,
+    )
+
+    for res in results:
+        if isinstance(res, Exception):
+            print(f"[Crawler] 其他直播间并发抓取异常: {res}")
             continue
 
+        room_name, room_url, room_info = res
         await _crawl_room_once(
             db=db,
             client=client,
             room_name=room_name,
             room_url=room_url,
             enable_danmu=False,
+            prefetched_room_info=room_info,
         )
 
 
@@ -176,6 +201,7 @@ async def _crawl_room_once(
     room_name: str,
     room_url: str,
     enable_danmu: bool,
+    prefetched_room_info: Optional[LiveRoomInfo] = None,
 ) -> None:
     """
     单个直播间的一次采集逻辑。
@@ -186,15 +212,17 @@ async def _crawl_room_once(
 
     参数：
         enable_danmu: 是否为该直播间启用弹幕采集（目前仅中国劲酒为 True）
+        prefetched_room_info: 预抓取的直播间信息（用于"并发抓取 + 串行落库"）
     """
+    live_state = LiveState.UNKNOWN
     if client is not None:
         # 真实爬虫模式：调用 DouyinLiveClient 获取直播间实时数据
-        room_info = await client.fetch_room_info(
+        room_info = prefetched_room_info or await client.fetch_room_info(
             room_name=room_name, room_url=room_url
         )
         online_count = room_info.online_count
         like_count = room_info.like_count
-        is_live = room_info.is_live
+        live_state = room_info.live_state
     else:
         # 模拟数据模式：根据预设基础值生成一组略有波动的假数据
         base = FAKE_ROOM_BASE_METRICS.get(
@@ -203,7 +231,9 @@ async def _crawl_room_once(
         online_count = max(0, base["online"] + random.randint(-50, 50))
         like_count = max(0, base["like"] + random.randint(-2000, 2000))
         # 模拟为正在直播
-        is_live = True
+        live_state = LiveState.LIVE
+
+    is_live = live_state == LiveState.LIVE
 
     # 决定是否写入数据库：
     # 1. 未开播：只在“状态变化为未开播”时写入一条记录，避免大量重复“未开播”行
@@ -212,14 +242,24 @@ async def _crawl_room_once(
     latest_metric = await crud.get_latest_metric_for_room(db, room_name)
 
     if client is not None:
-        # 仅在真实爬虫模式下启用更严格的“数据合理性”校验，
+        # 仅在真实爬虫模式下启用更严格的"数据合理性"校验，
         # 避免 DOM 解析异常导致的明显错误值覆盖历史正常数据。
-        if not is_live:
-            # 当前判断为未开播（在线和点赞都为 0）
+        if live_state == LiveState.UNKNOWN:
+            # 无法确认开播状态：不写入数据库，保持最近一次有效记录
+            if settings.enable_crawler_debug_log:
+                print(
+                    f"[Crawler] {room_name} 本次抓取状态=UNKNOWN，"
+                    "为避免误写数据，本次不写入数据库，将在下次循环重试。"
+                )
+            should_insert_metric = False
+        elif live_state == LiveState.OFFLINE:
+            # OFFLINE：写入"未开播"只需表达状态，人数/点赞统一归零
+            online_count = 0
+            like_count = 0
             if latest_metric is not None:
                 if latest_metric.is_live:
-                    # 上一条仍是“直播中”，且时间间隔较短时，
-                    # 直接从有数据跌到 0/0 很可能是解析失败，先暂不写入“未开播”记录。
+                    # 上一条仍是"直播中"，且时间间隔较短时，
+                    # 直接从有数据跌到 0/0 很可能是解析失败，先暂不写入"未开播"记录。
                     last_ts = latest_metric.created_at
                     if isinstance(last_ts, datetime):
                         delta = datetime.utcnow() - last_ts
@@ -228,11 +268,11 @@ async def _crawl_room_once(
                             if settings.enable_crawler_debug_log:
                                 print(
                                     f"[Crawler] {room_name} 最近一次仍为直播中，"
-                                    "本次采集到 0/0，疑似解析失败，本次不写入未开播记录。"
+                                    "本次采集到 OFFLINE，疑似解析失败，本次不写入未开播记录。"
                                 )
                             should_insert_metric = False
                 else:
-                    # 上一次已经是未开播，则不重复写入大量“未开播”行
+                    # 上一次已经是未开播，则不重复写入大量"未开播"行
                     should_insert_metric = False
         else:
             # 直播中：如果人数和点赞都为 0，视为抓取异常，不写入记录，下次重试
@@ -244,9 +284,17 @@ async def _crawl_room_once(
                     )
                 should_insert_metric = False
 
-            # 直播中但点赞数为 0（例如“茅台 145 人在线，点赞=0”），
+            # 直播中但在线人数为 0、点赞 > 0：常见于解析到"历史/静态点赞"但实际未拿到在线
+            elif online_count <= 0 and like_count > 0:
+                if settings.enable_crawler_debug_log:
+                    print(
+                        f"[Crawler] {room_name} 本次在线=0但点赞>0，疑似解析异常，"
+                        "本次不写入数据库，将在下次循环重试。"
+                    )
+                should_insert_metric = False
+
+            # 直播中但点赞数为 0（例如"茅台 145 人在线，点赞=0"），
             # 在正常直播情况下几乎不会出现，通常意味着本次抓取 DOM 解析异常。
-            # 为避免写入明显错误的数据，本次也不落库，等下一轮循环重试。
             elif online_count > 0 and like_count <= 0:
                 if settings.enable_crawler_debug_log:
                     print(

@@ -12,9 +12,11 @@
 - 如果后续发现选择器失效，只需要在本文件里微调解析逻辑即可。
 """
 
+import asyncio
 import random
 import re
 from dataclasses import dataclass
+from enum import Enum
 from typing import AsyncIterator, Dict, List, Optional, Set, Tuple
 
 from playwright.async_api import (
@@ -29,15 +31,37 @@ from playwright.async_api import (
 from ..config import settings
 
 
+class LiveState(str, Enum):
+    """
+    直播状态三态枚举：
+    - LIVE：确认直播中
+    - OFFLINE：确认未开播/已结束
+    - UNKNOWN：无法确认（解析失败/页面异常/信号冲突）
+    """
+
+    LIVE = "LIVE"
+    OFFLINE = "OFFLINE"
+    UNKNOWN = "UNKNOWN"
+
+
 @dataclass
 class LiveRoomInfo:
     """单个直播间的基本信息与实时数据。"""
 
     room_name: str
     room_url: str
-    is_live: bool
+    live_state: LiveState
     online_count: int
     like_count: int
+
+    @property
+    def is_live(self) -> bool:
+        """
+        为兼容旧代码保留的布尔字段语义：
+        - 仅当 live_state == LIVE 时返回 True
+        - UNKNOWN 返回 False（调用方应优先使用 live_state 做决策）
+        """
+        return self.live_state == LiveState.LIVE
 
 
 @dataclass
@@ -71,6 +95,22 @@ class DouyinLiveClient:
         self._navigation_timeout_ms: int = settings.playwright_navigation_timeout_ms
         self._danmu_max_items: int = settings.danmu_max_items_per_fetch
         self._enable_human_like_actions: bool = settings.enable_human_like_actions
+        self._enable_room_page_smart_wait: bool = settings.enable_room_page_smart_wait
+        self._room_page_smart_wait_timeout_ms: int = (
+            settings.room_page_smart_wait_timeout_ms
+        )
+        self._room_page_smart_wait_selectors: List[str] = self._split_csv(
+            settings.room_page_smart_wait_selectors
+        )
+        self._enable_three_state_live_detection: bool = (
+            settings.enable_three_state_live_detection
+        )
+        self._offline_text_keywords: List[str] = self._split_csv(
+            settings.room_offline_text_keywords
+        )
+        self._live_chat_message_selector: str = (
+            settings.room_live_chat_message_selector
+        )
 
         # 弹幕去重缓存：按房间名记录最近见过的弹幕 key（room|nickname|content）
         self._danmu_seen: Dict[str, Set[str]] = {}
@@ -229,6 +269,115 @@ class DouyinLiveClient:
         if not self._initialized:
             await self.init()
 
+    @staticmethod
+    def _split_csv(raw: str) -> List[str]:
+        """将逗号分隔字符串解析为列表。"""
+        if not raw:
+            return []
+        return [part.strip() for part in raw.split(",") if part.strip()]
+
+    async def _smart_wait_room_ready(self, page: Page) -> None:
+        """
+        用"关键元素就绪"替代固定 5 秒等待。
+
+        设计目标：
+        - 页面很快就绪时显著提速（提前结束等待）
+        - 页面较慢时不牺牲稳定性（最坏情况等到 timeout）
+        - 可通过 settings.enable_room_page_smart_wait 一键回滚到旧逻辑
+        """
+        if not self._enable_room_page_smart_wait:
+            await page.wait_for_timeout(5000)
+            return
+
+        timeout_ms = int(self._room_page_smart_wait_timeout_ms or 0)
+        if timeout_ms <= 0:
+            return
+
+        selectors = [s for s in self._room_page_smart_wait_selectors if s]
+        if not selectors:
+            await page.wait_for_timeout(timeout_ms)
+            return
+
+        # 尝试等待 DOMContentLoaded
+        try:
+            await page.wait_for_load_state(
+                "domcontentloaded", timeout=min(timeout_ms, 3000)
+            )
+        except Exception:
+            pass
+
+        tasks = [
+            asyncio.create_task(
+                page.wait_for_selector(
+                    selector, state="attached", timeout=timeout_ms
+                )
+            )
+            for selector in selectors
+        ]
+
+        try:
+            await asyncio.wait(
+                tasks,
+                return_when=asyncio.FIRST_COMPLETED,
+                timeout=timeout_ms / 1000,
+            )
+        finally:
+            for t in tasks:
+                if not t.done():
+                    t.cancel()
+            await asyncio.gather(*tasks, return_exceptions=True)
+
+    async def _detect_offline_by_text(self, page: Page) -> bool:
+        """通过页面文案判断"未开播/已结束"。"""
+        if not self._offline_text_keywords:
+            return False
+
+        for kw in self._offline_text_keywords:
+            try:
+                if await page.locator(f"text={kw}").count() > 0:
+                    return True
+            except Exception:
+                continue
+
+        return False
+
+    async def _detect_live_by_chat_activity(self, page: Page) -> bool:
+        """通过"聊天区是否出现弹幕内容节点"判断直播中（兜底信号）。"""
+        selector = (self._live_chat_message_selector or "").strip()
+        if not selector:
+            return False
+
+        try:
+            return await page.locator(selector).count() > 0
+        except Exception:
+            return False
+
+    @staticmethod
+    def _decide_live_state(
+        *,
+        offline_hit: bool,
+        online_count: int,
+        like_count: int,
+        chat_active: bool,
+    ) -> LiveState:
+        """
+        多信号三态判定：
+        - LIVE：在线人数 > 0 或 聊天活跃
+        - OFFLINE：命中离线文案，且无 LIVE 信号
+        - UNKNOWN：解析失败或信号冲突
+        """
+        live_by_online = online_count > 0
+        live_by_chat = chat_active
+
+        if offline_hit and (live_by_online or live_by_chat):
+            return LiveState.UNKNOWN
+        if live_by_online or live_by_chat:
+            return LiveState.LIVE
+        if offline_hit:
+            return LiveState.OFFLINE
+
+        return LiveState.UNKNOWN
+
     async def _extract_room_metrics(
         self,
         page: Page,
@@ -245,27 +394,22 @@ class DouyinLiveClient:
         online_count = 0
         like_count = 0
 
-        # 1. 在线人数：先尝试你提供的精确选择器，然后再用 data-e2e 兜底
+        # 1. 在线人数：优先使用相对稳定的 data-e2e；严格路径仅作为最后兜底
         try:
-            # 精确 CSS 选择器（来自你在 request.md 中的 JS 路径）
-            # document.querySelector("#chatroom > div.c9Poqbe4.unset-border > div.LyAdeVIF.sBRqUw32 > div.sDE_n_gz.dmp0TnCf > div.ClV317pr")
-            audience_selector_strict = (
-                "#chatroom > div.c9Poqbe4.unset-border > "
-                "div.LyAdeVIF.sBRqUw32 > div.sDE_n_gz.dmp0TnCf > "
-                "div.ClV317pr"
-            )
-            audience_elem = await page.query_selector(audience_selector_strict)
-
-            if audience_elem is not None:
-                text = (await audience_elem.inner_text()).strip()
+            audience_locator = page.locator('div[data-e2e="live-room-audience"]')
+            if await audience_locator.count() > 0:
+                text = (await audience_locator.first.inner_text()).strip()
                 online_count = self._parse_number_from_text(text)
             else:
-                # 若严格选择器失效，则退回到相对稳定的 data-e2e 属性
-                audience_locator = page.locator(
-                    'div[data-e2e="live-room-audience"]'
+                # 精确 CSS 选择器（来自你在 request.md 中的 JS 路径）
+                audience_selector_strict = (
+                    "#chatroom > div.c9Poqbe4.unset-border > "
+                    "div.LyAdeVIF.sBRqUw32 > div.sDE_n_gz.dmp0TnCf > "
+                    "div.ClV317pr"
                 )
-                if await audience_locator.count() > 0:
-                    text = (await audience_locator.first.inner_text()).strip()
+                audience_elem = await page.query_selector(audience_selector_strict)
+                if audience_elem is not None:
+                    text = (await audience_elem.inner_text()).strip()
                     online_count = self._parse_number_from_text(text)
         except Exception as exc:  # noqa: BLE001
             # 在线人数解析失败通常意味着选择器失效或页面结构变化，
@@ -275,25 +419,22 @@ class DouyinLiveClient:
                     f"[DouyinLiveClient] 获取在线人数失败: {room_name} {room_url} - {exc}"
                 )
 
-        # 2. 点赞数：先尝试你提供的精确选择器，再用“本场点赞”文本兜底
+        # 2. 点赞数：优先使用"本场点赞"文本；严格路径仅作为最后兜底
         try:
-            # 精确 CSS 选择器（来自你在 request.md 中的 JS 路径）
-            # document.querySelector("#room_info_bar > div.F4gIvJUc > div.AZr5KmrG.__leftContainer.yu4z0zVP > div.CsUBJdAJ.v1wQQUfA > div > div > div")
-            like_selector_strict = (
-                "#room_info_bar > div.F4gIvJUc > "
-                "div.AZr5KmrG.__leftContainer.yu4z0zVP > "
-                "div.CsUBJdAJ.v1wQQUfA > div > div > div"
-            )
-            like_elem = await page.query_selector(like_selector_strict)
-
-            if like_elem is not None:
-                text = (await like_elem.inner_text()).strip()
+            like_locator = page.locator('div:has-text("本场点赞")')
+            if await like_locator.count() > 0:
+                text = (await like_locator.first.inner_text()).strip()
                 like_count = self._parse_number_from_text(text)
             else:
-                # 兜底：从包含“本场点赞”文字的 div 中解析数字
-                like_locator = page.locator('div:has-text("本场点赞")')
-                if await like_locator.count() > 0:
-                    text = (await like_locator.first.inner_text()).strip()
+                # 精确 CSS 选择器（来自你在 request.md 中的 JS 路径）
+                like_selector_strict = (
+                    "#room_info_bar > div.F4gIvJUc > "
+                    "div.AZr5KmrG.__leftContainer.yu4z0zVP > "
+                    "div.CsUBJdAJ.v1wQQUfA > div > div > div"
+                )
+                like_elem = await page.query_selector(like_selector_strict)
+                if like_elem is not None:
+                    text = (await like_elem.inner_text()).strip()
                     like_count = self._parse_number_from_text(text)
         except Exception as exc:  # noqa: BLE001
             if settings.enable_crawler_debug_log:
@@ -370,10 +511,10 @@ class DouyinLiveClient:
                     wait_until="commit",
                     timeout=self._navigation_timeout_ms,
                 )
-                # 适当等待一小段时间，确保页面内部 JS 渲染完成
-                await page.wait_for_timeout(5000)
+                # 用"关键元素就绪"替代固定 5s 盲等：更快且不降低稳定性
+                await self._smart_wait_room_ready(page)
 
-                # 可选：在进入直播间后模拟一些轻量级的“人工操作”，
+                # 可选：在进入直播间后模拟一些轻量级的"人工操作"，
                 # 主要用于触发懒加载/前端逻辑，提升数据采集的稳定性。
                 if self._enable_human_like_actions:
                     await self._simulate_human_actions(page)
@@ -408,16 +549,17 @@ class DouyinLiveClient:
 
         实现思路：
         1. 打开直播间页面
-        2. 使用 data-e2e 或文本选择器定位在线人数和点赞数
-        3. 如果无法定位到关键元素，则认为未开播
+        2. 使用 data-e2e / 文本选择器定位在线人数与点赞数
+        3. 支持 LIVE/OFFLINE/UNKNOWN 三态
+           - UNKNOWN 不等价于未开播（避免 DOM 解析失败导致误判）
         """
         page = await self._open_room_page(room_url)
         if page is None:
-            # 打不开页面，视为未开播
+            # 打不开页面：不做"未开播"武断判断，返回 UNKNOWN 以避免误写数据
             return LiveRoomInfo(
                 room_name=room_name,
                 room_url=room_url,
-                is_live=False,
+                live_state=LiveState.UNKNOWN,
                 online_count=0,
                 like_count=0,
             )
@@ -429,7 +571,12 @@ class DouyinLiveClient:
             room_url=room_url,
         )
 
-        # 为了尽量避免“在线人数/点赞数为 0 的异常数据”，
+        offline_hit = False
+        if self._enable_three_state_live_detection:
+            # 优先识别"已结束/未开播"页面，避免无意义的重试等待
+            offline_hit = await self._detect_offline_by_text(page)
+
+        # 为了尽量避免"在线人数/点赞数为 0 的异常数据"，
         # 在任意一个指标为 0 时，会在同一页面上额外等待一段时间并重试若干次。
         best_online = online_count
         best_like = like_count
@@ -437,6 +584,7 @@ class DouyinLiveClient:
         if (
             (online_count <= 0 or like_count <= 0)
             and settings.room_info_retry_times > 0
+            and not offline_hit
         ):
             for _ in range(settings.room_info_retry_times):
                 try:
@@ -454,23 +602,41 @@ class DouyinLiveClient:
                     room_url=room_url,
                 )
 
-                # 取多次尝试中的“最好结果”：只要出现更大的有效值就更新
+                # 取多次尝试中的"最好结果"：只要出现更大的有效值就更新
                 if retry_online > best_online:
                     best_online = retry_online
                 if retry_like > best_like:
                     best_like = retry_like
 
-                # 若已经同时拿到“在线人数 > 0 且 点赞数 > 0”，认为数据足够可靠，可以提前结束重试
+                # 若已经同时拿到"在线人数 > 0 且 点赞数 > 0"，认为数据足够可靠，可以提前结束重试
                 if best_online > 0 and best_like > 0:
                     break
 
         online_count = best_online
         like_count = best_like
 
-        # 根据最终结果判断是否开播
-        is_live = online_count > 0 or like_count > 0
+        # 三态判定
+        if self._enable_three_state_live_detection:
+            chat_active = False
+            # 在线解析失败/矛盾值时，使用"聊天活跃"做兜底（避免漏检在播）
+            if not offline_hit and online_count <= 0:
+                chat_active = await self._detect_live_by_chat_activity(page)
 
-        # 对于“持久单房间”模式（例如中国劲酒专用客户端），不关闭页面，
+            live_state = self._decide_live_state(
+                offline_hit=offline_hit,
+                online_count=online_count,
+                like_count=like_count,
+                chat_active=chat_active,
+            )
+        else:
+            # 回滚逻辑：沿用旧的二值判定（在线>0 或 点赞>0 视为直播中）
+            live_state = (
+                LiveState.LIVE
+                if (online_count > 0 or like_count > 0)
+                else LiveState.OFFLINE
+            )
+
+        # 对于"持久单房间"模式（例如中国劲酒专用客户端），不关闭页面，
         # 以便后续弹幕抓取与下一次指标采集复用同一个 Page，减少反复打开成本。
         if not self._persistent_single_room:
             await page.close()
@@ -478,7 +644,7 @@ class DouyinLiveClient:
         return LiveRoomInfo(
             room_name=room_name,
             room_url=room_url,
-            is_live=is_live,
+            live_state=live_state,
             online_count=online_count,
             like_count=like_count,
         )

@@ -29,6 +29,8 @@ class Settings(BaseSettings):
 
     # 其他酒类直播间抓取间隔（秒），可相对降低频率
     other_rooms_interval_seconds: int = 15
+    # 其他直播间并发抓取上限（建议 2~3；设为 1 等价于串行，便于回滚）
+    other_rooms_concurrency: int = 2
 
     # 是否在启动时自动启动爬虫后台任务
     enable_background_crawler: bool = True
@@ -45,6 +47,18 @@ class Settings(BaseSettings):
 
     # 页面加载超时时间（毫秒），用于控制单次打开直播间的等待时间
     playwright_navigation_timeout_ms: int = 30000
+    # 页面就绪等待策略
+    # - True：等待"关键元素出现"后继续（更快；最坏情况仍等到超时）
+    # - False：回退到固定等待 5 秒（旧逻辑，便于快速止损/回滚）
+    enable_room_page_smart_wait: bool = True
+    # 智能等待的最长时长（毫秒）
+    room_page_smart_wait_timeout_ms: int = 5000
+    # 认为"页面关键模块已就绪"的候选选择器（逗号分隔；命中任一即可提前结束等待）
+    room_page_smart_wait_selectors: str = (
+        'div[data-e2e="live-room-audience"],'
+        'div:has-text("本场点赞"),'
+        "div.webcast-chatroom___list"
+    )
 
     # 单次抓取弹幕时最多解析的条数（预留给弹幕抓取逻辑使用）
     danmu_max_items_per_fetch: int = 30
@@ -69,6 +83,18 @@ class Settings(BaseSettings):
     # 注意：重试会延长单次采集时间，但可以显著降低错误数据。
     room_info_retry_times: int = 2  # 额外重试次数（总共最多采集 1 + room_info_retry_times 次）
     room_info_retry_interval_ms: int = 3000  # 每次重试前额外等待的时间（毫秒）
+    # 开播判定策略（多信号 + 三态）
+    # - True：启用 LIVE/OFFLINE/UNKNOWN 三态（UNKNOWN 不等于未开播）
+    # - False：回退到旧的二值逻辑（在线>0 或 点赞>0 即视为直播中）
+    enable_three_state_live_detection: bool = True
+    # 识别"未开播/已结束"页面的关键词（逗号分隔，命中任一视为 OFFLINE 信号）
+    # 注意：避免使用过宽的词如"回放"，可能在直播中页面也出现
+    room_offline_text_keywords: str = "直播已结束,已结束直播,直播结束,主播已离开"
+    # 识别"直播中"的聊天活跃信号（用于在线/点赞解析失败时兜底）
+    room_live_chat_message_selector: str = (
+        "div.webcast-chatroom___list "
+        "span.webcast-chatroom___content-with-emoji-text"
+    )
 
     class Config:
         env_file = ".env"

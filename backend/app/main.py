@@ -84,18 +84,35 @@ OLD_INDEX_HTML = """<!DOCTYPE html>
     <script src="https://cdn.jsdelivr.net/npm/countup.js@2/dist/countUp.umd.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+      /* macOS Light Mode - Apple HIG */
+      :root {
+        --apple-blue: #007AFF;
+        --apple-green: #34C759;
+        --apple-orange: #FF9500;
+        --apple-red: #FF3B30;
+        --apple-purple: #5856D6;
+        --apple-gray: #86868b;
+        --apple-bg: #f5f5f7;
+        --apple-card: rgba(255, 255, 255, 0.8);
+        --apple-border: rgba(0, 0, 0, 0.06);
+        --apple-text: #1d1d1f;
+        --apple-text-secondary: #86868b;
+      }
+
       body {
-        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", system-ui, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
         margin: 0;
-        padding: 16px;
-        background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
-        color: #e5e7eb;
+        padding: 24px;
+        background: var(--apple-bg);
+        color: var(--apple-text);
         min-height: 100vh;
         position: relative;
         overflow-x: hidden;
       }
 
-      /* 添加动态背景粒子效果 */
+      /* 微妙噪点纹理 */
       body::before {
         content: '';
         position: fixed;
@@ -103,17 +120,10 @@ OLD_INDEX_HTML = """<!DOCTYPE html>
         left: 0;
         width: 100%;
         height: 100%;
-        background:
-          radial-gradient(circle at 20% 80%, rgba(147, 51, 234, 0.3) 0%, transparent 50%),
-          radial-gradient(circle at 80% 20%, rgba(59, 130, 246, 0.3) 0%, transparent 50%),
-          radial-gradient(circle at 40% 40%, rgba(34, 197, 94, 0.2) 0%, transparent 50%);
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+        opacity: 0.015;
+        pointer-events: none;
         z-index: -1;
-        animation: gradientShift 15s ease-in-out infinite;
-      }
-
-      @keyframes gradientShift {
-        0%, 100% { opacity: 0.7; }
-        50% { opacity: 1; }
       }
 
       .page-container {
@@ -133,89 +143,65 @@ OLD_INDEX_HTML = """<!DOCTYPE html>
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 16px;
-        margin-bottom: 16px;
+        gap: 12px;
+        margin-bottom: 12px;
       }
 
       .title-main {
-        font-size: 32px;
-        font-weight: 800;
-        letter-spacing: 2px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        text-shadow: 0 0 30px rgba(147, 51, 234, 0.5);
-        animation: titleGlow 3s ease-in-out infinite alternate;
+        font-size: 28px;
+        font-weight: 600;
+        letter-spacing: -0.5px;
+        color: var(--apple-text);
       }
 
-      @keyframes titleGlow {
-        from { filter: brightness(1); }
-        to { filter: brightness(1.2); }
+      .title-main i {
+        color: var(--apple-blue);
+        margin-right: 8px;
       }
 
       .title-badge {
-        font-size: 12px;
-        padding: 6px 12px;
-        border-radius: 20px;
-        background: linear-gradient(135deg, #22c55e, #3b82f6);
-        color: #0b1120;
-        font-weight: 700;
+        font-size: 11px;
+        padding: 4px 10px;
+        border-radius: 6px;
+        background: var(--apple-blue);
+        color: #fff;
+        font-weight: 500;
         text-transform: uppercase;
-        letter-spacing: 0.1em;
+        letter-spacing: 0.05em;
         white-space: nowrap;
-        box-shadow: 0 4px 15px rgba(34, 197, 94, 0.4);
-        animation: badgePulse 2s ease-in-out infinite;
-      }
-
-      @keyframes badgePulse {
-        0%, 100% { transform: scale(1); }
-        50% { transform: scale(1.05); }
       }
 
       .subtitle {
-        font-size: 16px;
-        color: #9ca3af;
+        font-size: 15px;
+        color: var(--apple-text-secondary);
         margin-bottom: 12px;
-        font-weight: 300;
+        font-weight: 400;
       }
 
       .section {
-        background: rgba(17, 24, 39, 0.8);
-        backdrop-filter: blur(10px);
+        background: var(--apple-card);
+        backdrop-filter: blur(20px) saturate(180%);
+        -webkit-backdrop-filter: blur(20px) saturate(180%);
         padding: 20px;
-        margin-bottom: 24px;
-        border-radius: 16px;
+        margin-bottom: 20px;
+        border-radius: 12px;
         box-shadow:
-          0 25px 50px rgba(15, 23, 42, 0.7),
-          inset 0 1px 0 rgba(255, 255, 255, 0.1);
-        border: 1px solid rgba(148, 163, 184, 0.2);
+          0 0 0 0.5px var(--apple-border),
+          0 2px 8px rgba(0, 0, 0, 0.04),
+          0 8px 24px rgba(0, 0, 0, 0.06),
+          inset 0 1px 0 rgba(255, 255, 255, 0.6);
         position: relative;
         overflow: hidden;
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
       }
 
       .section:hover {
-        transform: translateY(-2px);
+        transform: translateY(-1px);
         box-shadow:
-          0 30px 60px rgba(15, 23, 42, 0.8),
-          inset 0 1px 0 rgba(255, 255, 255, 0.15);
-      }
-
-      .section::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 2px;
-        background: linear-gradient(90deg, transparent, rgba(147, 51, 234, 0.8), transparent);
-        animation: sweep 3s ease-in-out infinite;
-      }
-
-      @keyframes sweep {
-        0% { left: -100%; }
-        50%, 100% { left: 100%; }
+          0 0 0 0.5px var(--apple-border),
+          0 4px 12px rgba(0, 0, 0, 0.06),
+          0 12px 32px rgba(0, 0, 0, 0.08),
+          inset 0 1px 0 rgba(255, 255, 255, 0.6);
       }
 
       .section-header {
@@ -228,168 +214,152 @@ OLD_INDEX_HTML = """<!DOCTYPE html>
       }
 
       .section-title {
-        font-size: 20px;
-        font-weight: 700;
-        color: #f3f4f6;
+        font-size: 17px;
+        font-weight: 600;
+        color: var(--apple-text);
         display: flex;
         align-items: center;
         gap: 8px;
+        letter-spacing: -0.2px;
       }
 
       .section-title i {
-        color: #8b5cf6;
-        font-size: 18px;
+        color: var(--apple-blue);
+        font-size: 16px;
       }
 
       .section-subtitle {
-        font-size: 14px;
-        color: #9ca3af;
+        font-size: 13px;
+        color: var(--apple-text-secondary);
         font-weight: 400;
       }
 
       .stats-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 16px;
-        margin-bottom: 20px;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 12px;
+        margin-bottom: 16px;
       }
 
       .stat-card {
-        background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(147, 51, 234, 0.1));
-        border: 1px solid rgba(139, 92, 246, 0.3);
-        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.6);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border-radius: 10px;
         padding: 16px;
         text-align: center;
-        transition: all 0.3s ease;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
         position: relative;
         overflow: hidden;
-      }
-
-      .stat-card::before {
-        content: '';
-        position: absolute;
-        top: -50%;
-        left: -50%;
-        width: 200%;
-        height: 200%;
-        background: radial-gradient(circle, rgba(139, 92, 246, 0.1) 0%, transparent 70%);
-        animation: rotate 10s linear infinite;
-      }
-
-      @keyframes rotate {
-        from { transform: rotate(0deg); }
-        to { transform: rotate(360deg); }
+        box-shadow:
+          0 0 0 0.5px var(--apple-border),
+          0 1px 3px rgba(0, 0, 0, 0.04),
+          inset 0 1px 0 rgba(255, 255, 255, 0.8);
       }
 
       .stat-card:hover {
-        transform: translateY(-4px) scale(1.02);
-        box-shadow: 0 15px 30px rgba(139, 92, 246, 0.3);
-        border-color: rgba(139, 92, 246, 0.6);
+        transform: translateY(-2px) scale(1.01);
+        box-shadow:
+          0 0 0 0.5px var(--apple-border),
+          0 4px 12px rgba(0, 0, 0, 0.08),
+          inset 0 1px 0 rgba(255, 255, 255, 0.8);
       }
 
       .stat-value {
-        font-size: 28px;
-        font-weight: 800;
-        background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
+        font-size: 26px;
+        font-weight: 600;
+        color: var(--apple-text);
         margin-bottom: 4px;
+        letter-spacing: -0.5px;
       }
 
       .stat-label {
         font-size: 12px;
-        color: #9ca3af;
+        color: var(--apple-text-secondary);
         text-transform: uppercase;
-        letter-spacing: 0.05em;
-        font-weight: 600;
+        letter-spacing: 0.03em;
+        font-weight: 500;
       }
 
       .stat-change {
         font-size: 11px;
-        margin-top: 4px;
-        font-weight: 600;
+        margin-top: 6px;
+        font-weight: 500;
+        color: var(--apple-text-secondary);
       }
 
       .stat-up {
-        color: #22c55e;
+        color: var(--apple-green);
         display: inline-flex;
         align-items: center;
-        gap: 2px;
+        gap: 3px;
       }
 
       .stat-down {
-        color: #ef4444;
+        color: var(--apple-red);
         display: inline-flex;
         align-items: center;
-        gap: 2px;
+        gap: 3px;
       }
       table {
         width: 100%;
         border-collapse: separate;
         border-spacing: 0;
-        margin-top: 16px;
-        font-size: 14px;
-        border-radius: 12px;
+        margin-top: 12px;
+        font-size: 13px;
+        border-radius: 10px;
         overflow: hidden;
-        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.3);
+        background: rgba(255, 255, 255, 0.5);
+        box-shadow: 0 0 0 0.5px var(--apple-border);
       }
 
       th, td {
-        padding: 12px 16px;
+        padding: 12px 14px;
         text-align: center;
-        border-bottom: 1px solid rgba(55, 65, 81, 0.5);
+        border-bottom: 0.5px solid var(--apple-border);
       }
 
       th {
-        background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(147, 51, 234, 0.3));
-        color: #f3f4f6;
-        font-weight: 600;
+        background: rgba(0, 0, 0, 0.02);
+        color: var(--apple-text-secondary);
+        font-weight: 500;
         text-transform: uppercase;
-        font-size: 12px;
-        letter-spacing: 0.05em;
+        font-size: 11px;
+        letter-spacing: 0.03em;
         position: sticky;
         top: 0;
         z-index: 10;
       }
 
       td {
-        background: rgba(17, 24, 39, 0.4);
-        transition: all 0.3s ease;
+        background: transparent;
+        color: var(--apple-text);
+        transition: background 0.15s ease;
+      }
+
+      tr:last-child td {
+        border-bottom: none;
       }
 
       tr:hover td {
-        background: rgba(59, 130, 246, 0.1);
+        background: rgba(0, 122, 255, 0.04);
       }
 
       .live {
-        color: #fefce8;
-        background: linear-gradient(135deg, #f97316, #ef4444);
-        padding: 4px 12px;
-        border-radius: 20px;
-        font-weight: 700;
-        font-size: 12px;
-        animation: livePulse 2s ease-in-out infinite;
-        box-shadow: 0 0 15px rgba(249, 115, 22, 0.5);
-      }
-
-      @keyframes livePulse {
-        0%, 100% {
-          box-shadow: 0 0 15px rgba(249, 115, 22, 0.5);
-          transform: scale(1);
-        }
-        50% {
-          box-shadow: 0 0 25px rgba(249, 115, 22, 0.8);
-          transform: scale(1.05);
-        }
+        color: #fff;
+        background: var(--apple-green);
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-weight: 500;
+        font-size: 11px;
       }
 
       .offline {
-        color: #9ca3af;
-        padding: 4px 12px;
-        border-radius: 20px;
-        background: rgba(156, 163, 175, 0.2);
-        font-size: 12px;
+        color: var(--apple-text-secondary);
+        padding: 4px 10px;
+        border-radius: 6px;
+        background: rgba(0, 0, 0, 0.04);
+        font-size: 11px;
         font-weight: 500;
       }
 
@@ -398,75 +368,60 @@ OLD_INDEX_HTML = """<!DOCTYPE html>
         padding: 0;
         max-height: 400px;
         overflow-y: auto;
-        font-size: 14px;
-        border-radius: 8px;
+        font-size: 13px;
+        border-radius: 10px;
       }
 
       .danmu-item {
-        padding: 12px 16px;
-        margin-bottom: 8px;
-        background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(17, 24, 39, 0.6));
-        border-left: 3px solid #3b82f6;
+        padding: 12px 14px;
+        margin-bottom: 6px;
+        background: rgba(255, 255, 255, 0.5);
+        border-left: 3px solid var(--apple-blue);
         border-radius: 8px;
-        transition: all 0.3s ease;
-        animation: slideInRight 0.5s ease-out;
-      }
-
-      @keyframes slideInRight {
-        from {
-          opacity: 0;
-          transform: translateX(20px);
-        }
-        to {
-          opacity: 1;
-          transform: translateX(0);
-        }
+        transition: background 0.15s ease, transform 0.15s ease;
+        box-shadow: 0 0 0 0.5px var(--apple-border);
       }
 
       .danmu-item:hover {
-        background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(17, 24, 39, 0.8));
-        transform: translateX(4px);
-        box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+        background: rgba(255, 255, 255, 0.8);
+        transform: translateX(2px);
       }
 
       .danmu-nickname {
-        font-weight: 700;
-        color: #60a5fa;
+        font-weight: 600;
+        color: var(--apple-blue);
         margin-right: 8px;
-        text-shadow: 0 0 10px rgba(96, 165, 250, 0.5);
       }
 
       .danmu-time {
-        color: #6b7280;
-        font-size: 12px;
-        margin-right: 12px;
-        font-family: 'Courier New', monospace;
+        color: var(--apple-text-secondary);
+        font-size: 11px;
+        margin-right: 10px;
+        font-family: "SF Mono", "Menlo", monospace;
       }
 
       .footer {
-        font-size: 13px;
-        color: #9ca3af;
+        font-size: 12px;
+        color: var(--apple-text-secondary);
         margin-top: 12px;
         text-align: center;
-        opacity: 0.8;
       }
 
       .summary {
         margin-top: 12px;
-        font-size: 14px;
-        color: #e5e7eb;
-        background: rgba(59, 130, 246, 0.1);
-        padding: 12px 20px;
-        border-radius: 12px;
-        border: 1px solid rgba(59, 130, 246, 0.3);
+        font-size: 13px;
+        color: var(--apple-text);
+        background: rgba(0, 122, 255, 0.06);
+        padding: 12px 16px;
+        border-radius: 8px;
+        border: 0.5px solid rgba(0, 122, 255, 0.15);
         text-align: center;
         font-weight: 500;
-        letter-spacing: 0.02em;
       }
 
       .delta-up {
-        color: #22c55e;
-        font-size: 12px;
+        color: var(--apple-green);
+        font-size: 11px;
         margin-left: 6px;
         font-weight: 600;
         display: inline-flex;
@@ -475,8 +430,8 @@ OLD_INDEX_HTML = """<!DOCTYPE html>
       }
 
       .delta-down {
-        color: #ef4444;
-        font-size: 12px;
+        color: var(--apple-red);
+        font-size: 11px;
         margin-left: 6px;
         font-weight: 600;
         display: inline-flex;
@@ -487,152 +442,124 @@ OLD_INDEX_HTML = """<!DOCTYPE html>
       .charts-row {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-        gap: 20px;
-        margin-top: 20px;
+        gap: 16px;
+        margin-top: 16px;
       }
 
       .chart-box {
-        background: rgba(17, 24, 39, 0.8);
+        background: rgba(255, 255, 255, 0.6);
         backdrop-filter: blur(10px);
-        border-radius: 16px;
-        padding: 20px;
-        border: 1px solid rgba(59, 130, 246, 0.3);
-        box-shadow: 0 15px 35px rgba(15, 23, 42, 0.5);
-        transition: all 0.3s ease;
+        -webkit-backdrop-filter: blur(10px);
+        border-radius: 10px;
+        padding: 16px;
+        box-shadow:
+          0 0 0 0.5px var(--apple-border),
+          0 2px 8px rgba(0, 0, 0, 0.04),
+          inset 0 1px 0 rgba(255, 255, 255, 0.8);
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
         position: relative;
         overflow: hidden;
       }
 
-      .chart-box::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 2px;
-        background: linear-gradient(90deg, #3b82f6, #8b5cf6, #3b82f6);
-        animation: gradientFlow 3s ease-in-out infinite;
-      }
-
-      @keyframes gradientFlow {
-        0%, 100% { transform: translateX(-100%); }
-        50% { transform: translateX(100%); }
-      }
-
       .chart-box:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 20px 45px rgba(15, 23, 42, 0.7);
-        border-color: rgba(59, 130, 246, 0.5);
+        transform: translateY(-2px);
+        box-shadow:
+          0 0 0 0.5px var(--apple-border),
+          0 6px 16px rgba(0, 0, 0, 0.08),
+          inset 0 1px 0 rgba(255, 255, 255, 0.8);
       }
 
       .chart-title {
-        font-size: 16px;
-        color: #f3f4f6;
-        margin-bottom: 16px;
+        font-size: 14px;
+        color: var(--apple-text);
+        margin-bottom: 12px;
         font-weight: 600;
         display: flex;
         align-items: center;
         gap: 8px;
+        letter-spacing: -0.2px;
       }
 
       .chart-title i {
-        color: #3b82f6;
-        font-size: 14px;
+        color: var(--apple-blue);
+        font-size: 13px;
       }
 
       .chart-canvas {
         width: 100%;
         height: 280px;
-        border-radius: 8px;
+        border-radius: 6px;
       }
 
       .row-top1 {
-        background: linear-gradient(135deg, rgba(249, 115, 22, 0.25), rgba(59, 130, 246, 0.2));
-        animation: glowTop1 3s ease-in-out infinite alternate;
-      }
-
-      @keyframes glowTop1 {
-        from { box-shadow: inset 0 0 20px rgba(249, 115, 22, 0.3); }
-        to { box-shadow: inset 0 0 30px rgba(249, 115, 22, 0.5); }
+        background: rgba(52, 199, 89, 0.08);
       }
 
       .row-top3 {
-        background: linear-gradient(135deg, rgba(15, 118, 110, 0.15), rgba(59, 130, 246, 0.1));
+        background: rgba(0, 122, 255, 0.04);
       }
 
-      /* 选中用于查看历史趋势的行高亮 */
       .row-selected {
-        box-shadow: inset 0 0 0 2px rgba(59, 130, 246, 0.9);
-        transform: scale(1.01);
+        box-shadow: inset 0 0 0 2px var(--apple-blue);
       }
 
       .room-link {
-        color: #93c5fd;
+        color: var(--apple-blue);
         text-decoration: none;
-        font-weight: 600;
-        transition: all 0.3s ease;
-        padding: 2px 6px;
+        font-weight: 500;
+        transition: opacity 0.15s ease;
+        padding: 2px 4px;
         border-radius: 4px;
       }
 
       .room-link:hover {
-        color: #dbeafe;
-        background: rgba(59, 130, 246, 0.2);
+        opacity: 0.7;
         text-decoration: none;
-        transform: scale(1.05);
       }
 
-      /* 新增样式类 */
       .realtime-indicator {
         display: inline-flex;
         align-items: center;
         gap: 6px;
-        padding: 4px 12px;
-        background: rgba(34, 197, 94, 0.2);
-        border: 1px solid rgba(34, 197, 94, 0.4);
-        border-radius: 20px;
-        font-size: 12px;
-        color: #22c55e;
-        font-weight: 600;
-        animation: indicatorPulse 2s ease-in-out infinite;
-      }
-
-      @keyframes indicatorPulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.7; }
+        padding: 4px 10px;
+        background: rgba(52, 199, 89, 0.1);
+        border: 0.5px solid rgba(52, 199, 89, 0.3);
+        border-radius: 6px;
+        font-size: 11px;
+        color: var(--apple-green);
+        font-weight: 500;
       }
 
       .realtime-dot {
-        width: 8px;
-        height: 8px;
-        background: #22c55e;
+        width: 6px;
+        height: 6px;
+        background: var(--apple-green);
         border-radius: 50%;
-        animation: dotPulse 1s ease-in-out infinite;
+        animation: dotPulse 2s ease-in-out infinite;
       }
 
       @keyframes dotPulse {
-        0%, 100% { transform: scale(1); opacity: 1; }
-        50% { transform: scale(1.3); opacity: 0.7; }
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
       }
 
-      /* 滚动条样式 */
+      /* 滚动条样式 - macOS 风格 */
       ::-webkit-scrollbar {
         width: 8px;
         height: 8px;
       }
 
       ::-webkit-scrollbar-track {
-        background: rgba(17, 24, 39, 0.4);
-        border-radius: 4px;
+        background: transparent;
       }
 
       ::-webkit-scrollbar-thumb {
-        background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+        background: rgba(0, 0, 0, 0.2);
         border-radius: 4px;
       }
 
       ::-webkit-scrollbar-thumb:hover {
-        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        background: rgba(0, 0, 0, 0.3);
       }
 
       .section-controls {
@@ -649,70 +576,75 @@ OLD_INDEX_HTML = """<!DOCTYPE html>
         display: flex;
         align-items: center;
         gap: 8px;
-        font-size: 13px;
-        color: #9ca3af;
+        font-size: 12px;
+        color: var(--apple-text-secondary);
       }
 
       .toggle-button {
-        border-radius: 999px;
-        border: 1px solid rgba(148, 163, 184, 0.4);
-        background: rgba(15, 23, 42, 0.6);
-        color: #e5e7eb;
-        padding: 4px 10px;
+        border-radius: 6px;
+        border: 0.5px solid var(--apple-border);
+        background: rgba(255, 255, 255, 0.6);
+        color: var(--apple-text);
+        padding: 6px 12px;
         font-size: 12px;
+        font-weight: 500;
         cursor: pointer;
-        transition: all 0.2s ease;
+        transition: all 0.15s ease;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
       }
 
       .toggle-button:hover {
-        background: rgba(30, 64, 175, 0.8);
-        border-color: rgba(59, 130, 246, 0.8);
+        background: rgba(255, 255, 255, 0.9);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+      }
+
+      .toggle-button:active {
+        transform: scale(0.97);
       }
 
       .toggle-button.active {
-        background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-        border-color: transparent;
-        box-shadow: 0 0 12px rgba(59, 130, 246, 0.6);
+        background: var(--apple-blue);
+        border-color: var(--apple-blue);
+        color: #fff;
+        box-shadow: 0 1px 3px rgba(0, 122, 255, 0.3);
       }
 
-      /* 手动重查按钮：在“未开播”状态后面的小号操作按钮 */
       .recheck-button {
         margin-left: 8px;
-        padding: 2px 8px;
+        padding: 4px 10px;
         font-size: 11px;
       }
 
-      /* 手动重查结果的小气泡提示 */
       .recheck-tooltip {
         display: inline-flex;
         align-items: center;
         gap: 4px;
         margin-left: 6px;
-        padding: 2px 8px;
-        border-radius: 999px;
+        padding: 3px 8px;
+        border-radius: 6px;
         font-size: 11px;
-        border: 1px solid rgba(148, 163, 184, 0.5);
-        background: rgba(15, 23, 42, 0.9);
-        color: #e5e7eb;
+        border: 0.5px solid var(--apple-border);
+        background: rgba(255, 255, 255, 0.9);
+        color: var(--apple-text);
         animation: fadeInOut 3s ease-in-out forwards;
       }
 
       .recheck-tooltip-ok {
-        border-color: rgba(34, 197, 94, 0.6);
-        background: rgba(22, 163, 74, 0.25);
-        color: #bbf7d0;
+        border-color: rgba(52, 199, 89, 0.4);
+        background: rgba(52, 199, 89, 0.1);
+        color: var(--apple-green);
       }
 
       .recheck-tooltip-warn {
-        border-color: rgba(249, 115, 22, 0.7);
-        background: rgba(248, 171, 96, 0.2);
-        color: #fed7aa;
+        border-color: rgba(255, 149, 0, 0.4);
+        background: rgba(255, 149, 0, 0.1);
+        color: var(--apple-orange);
       }
 
       .recheck-tooltip-error {
-        border-color: rgba(239, 68, 68, 0.7);
-        background: rgba(248, 113, 113, 0.24);
-        color: #fee2e2;
+        border-color: rgba(255, 59, 48, 0.4);
+        background: rgba(255, 59, 48, 0.1);
+        color: var(--apple-red);
       }
 
       @keyframes fadeInOut {
@@ -727,71 +659,77 @@ OLD_INDEX_HTML = """<!DOCTYPE html>
         flex-direction: column;
         gap: 8px;
         margin-bottom: 12px;
-        padding: 10px 12px;
-        border-radius: 10px;
-        background: rgba(15, 23, 42, 0.85);
-        border: 1px solid rgba(148, 163, 184, 0.3);
+        padding: 12px 14px;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.5);
+        border: 0.5px solid var(--apple-border);
         font-size: 13px;
-        color: #e5e7eb;
+        color: var(--apple-text);
       }
 
       .keyword-tags {
         display: flex;
         flex-wrap: wrap;
         gap: 6px;
-        margin-top: 2px;
+        margin-top: 4px;
       }
 
       .keyword-tag {
         display: inline-flex;
         align-items: center;
         gap: 4px;
-        padding: 2px 8px;
-        border-radius: 999px;
-        background: rgba(30, 64, 175, 0.35);
-        border: 1px solid rgba(59, 130, 246, 0.8);
+        padding: 3px 10px;
+        border-radius: 6px;
+        background: rgba(0, 122, 255, 0.08);
+        border: 0.5px solid rgba(0, 122, 255, 0.2);
         font-size: 11px;
-        color: #e5e7eb;
+        color: var(--apple-blue);
+        font-weight: 500;
       }
 
       .keyword-tag.muted {
-        background: rgba(31, 41, 55, 0.8);
-        border-color: rgba(75, 85, 99, 0.8);
-        color: #9ca3af;
+        background: rgba(0, 0, 0, 0.03);
+        border-color: var(--apple-border);
+        color: var(--apple-text-secondary);
       }
 
       .keyword-count {
-        background: rgba(15, 23, 42, 0.9);
-        padding: 1px 5px;
-        border-radius: 999px;
+        background: rgba(0, 122, 255, 0.15);
+        padding: 1px 6px;
+        border-radius: 4px;
         font-weight: 600;
-        color: #bfdbfe;
+        color: var(--apple-blue);
       }
 
       /* 响应式设计 */
       @media (max-width: 768px) {
+        body {
+          padding: 16px;
+        }
+
         .page-container {
-          padding: 12px;
+          padding: 0;
         }
 
         .title-main {
-          font-size: 24px;
+          font-size: 22px;
         }
 
         .charts-row {
           grid-template-columns: 1fr;
-          gap: 16px;
+          gap: 12px;
         }
 
         .stats-grid {
-          grid-template-columns: 1fr;
+          grid-template-columns: 1fr 1fr;
         }
 
         .section {
-          padding: 16px;
+          padding: 14px;
         }
 
         .section-controls {
+          flex-direction: column;
           align-items: flex-start;
         }
 
@@ -800,7 +738,7 @@ OLD_INDEX_HTML = """<!DOCTYPE html>
         }
 
         th, td {
-          padding: 8px 12px;
+          padding: 10px 8px;
         }
       }
     </style>
@@ -1030,14 +968,17 @@ OLD_INDEX_HTML = """<!DOCTYPE html>
       let countUpInstances = {};
 
       // 控制展示和刷新行为的状态
-      let showOnlyLive = true;        // 是否只展示“直播中”的直播间（排行榜）
-      let showOnlyOtherRooms = false; // 是否只展示“中国劲酒之外”的其他直播间
+      let showOnlyLive = true;        // 是否只展示"直播中"的直播间（排行榜）
+      let showOnlyOtherRooms = false; // 是否只展示"中国劲酒之外"的其他直播间
       let autoRefreshEnabled = true;  // 是否开启自动刷新
-      let refreshTimer = null;        // 自动刷新定时器句柄
+      let overviewTimer = null;       // 概览数据刷新定时器
+      let historyTimer = null;        // 历史趋势刷新定时器
 
       // 历史趋势相关状态
       let selectedRoomName = null;    // 当前选中用于查看历史趋势的直播间
-      const HISTORY_MINUTES = 60;     // 历史趋势默认时间窗口（单位：分钟）
+      const HISTORY_MINUTES = 60;     // 历史趋势时间窗口
+      const OVERVIEW_INTERVAL = 5000; // 概览刷新间隔 (5s)
+      const HISTORY_INTERVAL = 60000; // 历史刷新间隔 (60s)
 
       // 初始化 CountUp 实例
       function initCountUp(id, startVal, endVal, duration = 2) {
@@ -1451,15 +1392,20 @@ OLD_INDEX_HTML = """<!DOCTYPE html>
           if (historyChart && window.echarts) {
             historyChart.showLoading({
               text: '正在加载历史数据...',
-              color: '#22c55e',
-              textColor: '#9ca3af',
-              maskColor: 'rgba(17, 24, 39, 0.6)'
+              color: '#007AFF',
+              textColor: '#86868b',
+              maskColor: 'rgba(255, 255, 255, 0.8)'
             });
           }
 
           const data = await fetchJson(
             `/metrics/history?room_name=${encodeURIComponent(roomName)}&minutes=${HISTORY_MINUTES}`
           );
+
+          // 防止竞态条件：如果用户已切换到其他房间，丢弃本次数据
+          if (roomName !== selectedRoomName) {
+            return;
+          }
 
           if (!historyChart || !window.echarts) {
             return;
@@ -1502,18 +1448,19 @@ OLD_INDEX_HTML = """<!DOCTYPE html>
           historyChart.setOption({
             tooltip: {
               trigger: "axis",
-              backgroundColor: "rgba(0, 0, 0, 0.8)",
-              borderColor: "rgba(59, 130, 246, 0.6)",
+              backgroundColor: "rgba(255, 255, 255, 0.95)",
+              borderColor: "rgba(0, 0, 0, 0.08)",
               borderWidth: 1,
-              textStyle: { color: "#e5e7eb" },
+              textStyle: { color: "#1d1d1f" },
+              extraCssText: 'box-shadow: 0 4px 16px rgba(0,0,0,0.12); border-radius: 8px;'
             },
             legend: {
               data: ["在线人数", "本场点赞"],
-              textStyle: { color: "#e5e7eb" },
+              textStyle: { color: "#86868b", fontSize: 11 },
             },
             grid: {
-              left: 40,
-              right: 50,
+              left: 50,
+              right: 60,
               top: 50,
               bottom: 50,
             },
@@ -1521,37 +1468,41 @@ OLD_INDEX_HTML = """<!DOCTYPE html>
               type: "category",
               data: times.map((t) => formatTime(t)),
               axisLabel: {
-                color: "#9ca3af",
+                color: "#86868b",
                 rotate: 30,
+                fontSize: 10
               },
               axisLine: {
-                lineStyle: { color: "#4b5563" },
+                lineStyle: { color: "rgba(0,0,0,0.08)" },
               },
             },
             yAxis: [
               {
                 type: "value",
                 name: "在线人数",
-                nameTextStyle: { color: "#9ca3af" },
+                nameTextStyle: { color: "#86868b", fontSize: 11 },
                 axisLabel: {
-                  color: "#9ca3af",
+                  color: "#86868b",
+                  fontSize: 10,
                   formatter: function (value) {
                     return formatNumber(value);
                   },
                 },
                 splitLine: {
                   lineStyle: {
-                    color: "rgba(75,85,99,0.4)",
-                    type: "dashed",
+                    color: "rgba(0,0,0,0.04)",
+                    type: "solid",
                   },
                 },
+                axisLine: { show: false },
               },
               {
                 type: "value",
                 name: "本场点赞",
-                nameTextStyle: { color: "#9ca3af" },
+                nameTextStyle: { color: "#86868b", fontSize: 11 },
                 axisLabel: {
-                  color: "#9ca3af",
+                  color: "#86868b",
+                  fontSize: 10,
                   formatter: function (value) {
                     return formatNumber(value);
                   },
@@ -1559,6 +1510,7 @@ OLD_INDEX_HTML = """<!DOCTYPE html>
                 splitLine: {
                   show: false,
                 },
+                axisLine: { show: false },
               },
             ],
             series: [
@@ -1569,11 +1521,17 @@ OLD_INDEX_HTML = """<!DOCTYPE html>
                 showSymbol: false,
                 data: onlineSeries,
                 lineStyle: {
-                  width: 3,
-                  color: "#3b82f6",
+                  width: 2.5,
+                  color: "#007AFF",
                 },
                 itemStyle: {
-                  color: "#60a5fa",
+                  color: "#007AFF",
+                },
+                areaStyle: {
+                  color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                    { offset: 0, color: "rgba(0,122,255,0.15)" },
+                    { offset: 1, color: "rgba(0,122,255,0.02)" }
+                  ])
                 },
               },
               {
@@ -1584,11 +1542,17 @@ OLD_INDEX_HTML = """<!DOCTYPE html>
                 yAxisIndex: 1,
                 data: likeSeries,
                 lineStyle: {
-                  width: 3,
-                  color: "#f97316",
+                  width: 2.5,
+                  color: "#FF9500",
                 },
                 itemStyle: {
-                  color: "#fdba74",
+                  color: "#FF9500",
+                },
+                areaStyle: {
+                  color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                    { offset: 0, color: "rgba(255,149,0,0.15)" },
+                    { offset: 1, color: "rgba(255,149,0,0.02)" }
+                  ])
                 },
               },
             ],
@@ -1639,6 +1603,8 @@ OLD_INDEX_HTML = """<!DOCTYPE html>
 
         // 加载该直播间的历史趋势
         loadHistoryForRoom(roomName, false);
+        // 重置历史数据轮询（立即开始新的周期）
+        startHistoryPolling(roomName);
       }
 
       function renderCharts(overview) {
@@ -1674,56 +1640,57 @@ OLD_INDEX_HTML = """<!DOCTYPE html>
           onlineChart.setOption({
             tooltip: {
               trigger: "axis",
-              backgroundColor: 'rgba(0, 0, 0, 0.8)',
-              borderColor: 'rgba(147, 51, 234, 0.5)',
+              backgroundColor: 'rgba(255, 255, 255, 0.95)',
+              borderColor: 'rgba(0, 0, 0, 0.08)',
               borderWidth: 1,
-              textStyle: { color: '#e5e7eb' },
+              textStyle: { color: '#1d1d1f' },
               formatter: function(params) {
                 const data = params[0];
-                return `<div style="font-weight: 600; margin-bottom: 4px;">${data.name}</div>
-                        <div style="color: #60a5fa;">在线人数: ${data.value.toLocaleString()}</div>`;
-              }
+                return `<div style="font-weight: 600; margin-bottom: 4px; color: #1d1d1f;">${data.name}</div>
+                        <div style="color: #007AFF;">在线人数: ${data.value.toLocaleString()}</div>`;
+              },
+              extraCssText: 'box-shadow: 0 4px 16px rgba(0,0,0,0.12); border-radius: 8px;'
             },
             grid: {
-              left: 40, right: 20, top: 40, bottom: 60,
-              backgroundColor: 'rgba(17, 24, 39, 0.2)',
-              borderColor: 'rgba(147, 51, 234, 0.3)',
-              borderWidth: 1
+              left: 50, right: 20, top: 40, bottom: 60,
+              backgroundColor: 'transparent'
             },
             xAxis: {
               type: "category",
               data: names,
               axisLabel: {
-                color: "#9ca3af",
+                color: "#86868b",
                 interval: 0,
                 rotate: names.length > 4 ? 30 : 0,
-                fontWeight: 500
+                fontWeight: 500,
+                fontSize: 11
               },
               axisLine: {
-                lineStyle: { color: "#4b5563", width: 2 }
+                lineStyle: { color: "rgba(0,0,0,0.08)", width: 1 }
               },
               axisTick: {
-                lineStyle: { color: "#4b5563" }
+                lineStyle: { color: "rgba(0,0,0,0.08)" }
               }
             },
             yAxis: {
               type: "value",
               name: "在线人数",
-              nameTextStyle: { color: "#9ca3af", fontWeight: 600 },
+              nameTextStyle: { color: "#86868b", fontWeight: 500, fontSize: 11 },
               axisLabel: {
-                color: "#9ca3af",
+                color: "#86868b",
+                fontSize: 11,
                 formatter: function(value) {
                   return formatNumber(value);
                 }
               },
               splitLine: {
                 lineStyle: {
-                  color: "rgba(75,85,99,0.4)",
-                  type: 'dashed'
+                  color: "rgba(0,0,0,0.04)",
+                  type: 'solid'
                 }
               },
               axisLine: {
-                lineStyle: { color: "#4b5563" }
+                show: false
               }
             },
             series: [
@@ -1733,27 +1700,22 @@ OLD_INDEX_HTML = """<!DOCTYPE html>
                 data: onlineData,
                 itemStyle: {
                   color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                    { offset: 0, color: "#22c55e" },
-                    { offset: 0.5, color: "#3b82f6" },
-                    { offset: 1, color: "#8b5cf6" }
+                    { offset: 0, color: "#34C759" },
+                    { offset: 1, color: "#30B350" }
                   ]),
-                  borderRadius: [8, 8, 0, 0],
-                  shadowBlur: 10,
-                  shadowColor: 'rgba(59, 130, 246, 0.5)'
+                  borderRadius: [6, 6, 0, 0]
                 },
-                barWidth: '60%',
+                barWidth: '55%',
                 emphasis: {
                   itemStyle: {
                     color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                      { offset: 0, color: "#34d399" },
-                      { offset: 1, color: "#60a5fa" }
-                    ]),
-                    shadowBlur: 20,
-                    shadowColor: 'rgba(34, 197, 94, 0.7)'
+                      { offset: 0, color: "#40D964" },
+                      { offset: 1, color: "#34C759" }
+                    ])
                   }
                 },
-                animationDuration: 1500,
-                animationEasing: 'elasticOut'
+                animationDuration: 800,
+                animationEasing: 'cubicOut'
               }
             ]
           }, true);
@@ -1764,56 +1726,57 @@ OLD_INDEX_HTML = """<!DOCTYPE html>
           likeChart.setOption({
             tooltip: {
               trigger: "axis",
-              backgroundColor: 'rgba(0, 0, 0, 0.8)',
-              borderColor: 'rgba(249, 115, 22, 0.5)',
+              backgroundColor: 'rgba(255, 255, 255, 0.95)',
+              borderColor: 'rgba(0, 0, 0, 0.08)',
               borderWidth: 1,
-              textStyle: { color: '#e5e7eb' },
+              textStyle: { color: '#1d1d1f' },
               formatter: function(params) {
                 const data = params[0];
-                return `<div style="font-weight: 600; margin-bottom: 4px;">${data.name}</div>
-                        <div style="color: #f97316;">本场点赞: ${data.value.toLocaleString()}</div>`;
-              }
+                return `<div style="font-weight: 600; margin-bottom: 4px; color: #1d1d1f;">${data.name}</div>
+                        <div style="color: #FF9500;">本场点赞: ${data.value.toLocaleString()}</div>`;
+              },
+              extraCssText: 'box-shadow: 0 4px 16px rgba(0,0,0,0.12); border-radius: 8px;'
             },
             grid: {
-              left: 40, right: 20, top: 40, bottom: 60,
-              backgroundColor: 'rgba(17, 24, 39, 0.2)',
-              borderColor: 'rgba(249, 115, 22, 0.3)',
-              borderWidth: 1
+              left: 50, right: 20, top: 40, bottom: 60,
+              backgroundColor: 'transparent'
             },
             xAxis: {
               type: "category",
               data: names,
               axisLabel: {
-                color: "#9ca3af",
+                color: "#86868b",
                 interval: 0,
                 rotate: names.length > 4 ? 30 : 0,
-                fontWeight: 500
+                fontWeight: 500,
+                fontSize: 11
               },
               axisLine: {
-                lineStyle: { color: "#4b5563", width: 2 }
+                lineStyle: { color: "rgba(0,0,0,0.08)", width: 1 }
               },
               axisTick: {
-                lineStyle: { color: "#4b5563" }
+                lineStyle: { color: "rgba(0,0,0,0.08)" }
               }
             },
             yAxis: {
               type: "value",
               name: "本场点赞",
-              nameTextStyle: { color: "#9ca3af", fontWeight: 600 },
+              nameTextStyle: { color: "#86868b", fontWeight: 500, fontSize: 11 },
               axisLabel: {
-                color: "#9ca3af",
+                color: "#86868b",
+                fontSize: 11,
                 formatter: function(value) {
                   return formatNumber(value);
                 }
               },
               splitLine: {
                 lineStyle: {
-                  color: "rgba(75,85,99,0.4)",
-                  type: 'dashed'
+                  color: "rgba(0,0,0,0.04)",
+                  type: 'solid'
                 }
               },
               axisLine: {
-                lineStyle: { color: "#4b5563" }
+                show: false
               }
             },
             series: [
@@ -1822,49 +1785,33 @@ OLD_INDEX_HTML = """<!DOCTYPE html>
                 type: "line",
                 smooth: true,
                 showSymbol: true,
-                symbolSize: 8,
+                symbolSize: 6,
                 symbol: 'circle',
                 data: likeData,
                 lineStyle: {
-                  width: 3,
-                  color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
-                    { offset: 0, color: "#f97316" },
-                    { offset: 0.5, color: "#ef4444" },
-                    { offset: 1, color: "#f59e0b" }
-                  ]),
-                  shadowBlur: 10,
-                  shadowColor: 'rgba(249, 115, 22, 0.5)'
+                  width: 2.5,
+                  color: "#FF9500"
                 },
                 itemStyle: {
-                  color: "#f97316",
+                  color: "#FF9500",
                   borderColor: '#fff',
-                  borderWidth: 2,
-                  shadowBlur: 8,
-                  shadowColor: 'rgba(249, 115, 22, 0.7)'
+                  borderWidth: 2
                 },
                 areaStyle: {
                   color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                    { offset: 0, color: "rgba(249,115,22,0.6)" },
-                    { offset: 0.5, color: "rgba(239,68,68,0.3)" },
-                    { offset: 1, color: "rgba(15,23,42,0.1)" }
-                  ]),
-                  opacity: 0.8
+                    { offset: 0, color: "rgba(255,149,0,0.2)" },
+                    { offset: 1, color: "rgba(255,149,0,0.02)" }
+                  ])
                 },
                 emphasis: {
                   itemStyle: {
-                    color: '#fbbf24',
+                    color: '#FF9500',
                     borderColor: '#fff',
-                    borderWidth: 3,
-                    shadowBlur: 15,
-                    shadowColor: 'rgba(251, 191, 36, 0.8)'
-                  },
-                  lineStyle: {
-                    width: 4,
-                    color: '#fbbf24'
+                    borderWidth: 3
                   }
                 },
-                animationDuration: 2000,
-                animationEasing: 'elasticOut'
+                animationDuration: 800,
+                animationEasing: 'cubicOut'
               }
             ]
           }, true);
@@ -1944,7 +1891,11 @@ OLD_INDEX_HTML = """<!DOCTYPE html>
 
           const nickSpan = document.createElement("span");
           nickSpan.className = "danmu-nickname";
-          nickSpan.innerHTML = `<i class="fas fa-user"></i> ${dm.sender_nickname}：`;
+          // 使用 textContent 避免 XSS 风险
+          const nickIcon = document.createElement("i");
+          nickIcon.className = "fas fa-user";
+          nickSpan.appendChild(nickIcon);
+          nickSpan.appendChild(document.createTextNode(" " + dm.sender_nickname + "："));
           li.appendChild(nickSpan);
 
           const contentSpan = document.createElement("span");
@@ -1976,7 +1927,21 @@ OLD_INDEX_HTML = """<!DOCTYPE html>
         }
       }
 
-      async function refreshAll() {
+      // 启动或重置历史数据的自动刷新
+      function startHistoryPolling(roomName) {
+        if (historyTimer) {
+          clearInterval(historyTimer);
+          historyTimer = null;
+        }
+        if (autoRefreshEnabled && roomName) {
+          historyTimer = setInterval(() => {
+            loadHistoryForRoom(roomName, true);
+          }, HISTORY_INTERVAL);
+        }
+      }
+
+      // 仅刷新概览数据（高频）
+      async function refreshOverview() {
         try {
           const [overview, danmu] = await Promise.all([
             fetchJson("/overview/live-rooms"),
@@ -1989,13 +1954,8 @@ OLD_INDEX_HTML = """<!DOCTYPE html>
 
           renderRooms(overview);
           renderDanmu(danmu);
-
-          // 如果已经选中了某个直播间，则在每次全局刷新后同步刷新一次历史趋势
-          if (selectedRoomName) {
-            loadHistoryForRoom(selectedRoomName, true);
-          }
         } catch (err) {
-          console.error("刷新数据失败:", err);
+          console.error("概览数据刷新失败:", err);
 
           // 显示错误提示
           const summaryBar = document.getElementById("summary-bar");
@@ -2082,7 +2042,7 @@ OLD_INDEX_HTML = """<!DOCTYPE html>
           }
 
           // 使用统一的全局刷新逻辑，确保排名、图表等全部使用最新数据
-          await refreshAll();
+          await refreshOverview();
         } catch (err) {
           console.error("手动重查失败:", err);
 
@@ -2124,12 +2084,11 @@ OLD_INDEX_HTML = """<!DOCTYPE html>
 
         if (onlineEl && window.echarts) {
           onlineChart = echarts.init(onlineEl);
-          // 设置初始加载动画
           onlineChart.showLoading({
             text: '正在加载数据...',
-            color: '#3b82f6',
-            textColor: '#9ca3af',
-            maskColor: 'rgba(17, 24, 39, 0.6)'
+            color: '#007AFF',
+            textColor: '#86868b',
+            maskColor: 'rgba(255, 255, 255, 0.8)'
           });
         }
 
@@ -2137,9 +2096,9 @@ OLD_INDEX_HTML = """<!DOCTYPE html>
           likeChart = echarts.init(likeEl);
           likeChart.showLoading({
             text: '正在加载数据...',
-            color: '#f97316',
-            textColor: '#9ca3af',
-            maskColor: 'rgba(17, 24, 39, 0.6)'
+            color: '#FF9500',
+            textColor: '#86868b',
+            maskColor: 'rgba(255, 255, 255, 0.8)'
           });
         }
 
@@ -2156,36 +2115,38 @@ OLD_INDEX_HTML = """<!DOCTYPE html>
         });
 
         // 初始数据加载
-        refreshAll();
+        refreshOverview();
 
-        // 设置定时刷新
+        // 设置概览定时刷新 (5s)
         if (autoRefreshEnabled) {
-          refreshTimer = setInterval(() => {
-            refreshAll();
-          }, 5000);
+          overviewTimer = setInterval(() => {
+            refreshOverview();
+          }, OVERVIEW_INTERVAL);
         }
 
         // 添加键盘快捷键支持
         document.addEventListener('keydown', (e) => {
           if (e.key === 'F5' || (e.ctrlKey && e.key === 'r')) {
             e.preventDefault();
-            refreshAll();
+            refreshOverview();
+            if (selectedRoomName) loadHistoryForRoom(selectedRoomName, false);
           }
         });
 
         // 页面可见性变化时刷新数据（用户回到页面时）
         document.addEventListener('visibilitychange', () => {
           if (!document.hidden) {
-            setTimeout(refreshAll, 1000);
+            setTimeout(refreshOverview, 1000);
+            if (selectedRoomName) loadHistoryForRoom(selectedRoomName, true);
           }
         });
 
-        // 添加页面加载完成的视觉反馈
+        // 页面加载完成的视觉反馈
         document.body.style.opacity = '0';
         setTimeout(() => {
-          document.body.style.transition = 'opacity 1s ease-in-out';
+          document.body.style.transition = 'opacity 0.5s ease-out';
           document.body.style.opacity = '1';
-        }, 100);
+        }, 50);
       });
 
       // 添加一些额外的交互效果 & 交互控制逻辑
@@ -2227,7 +2188,7 @@ OLD_INDEX_HTML = """<!DOCTYPE html>
             if (lastOverview) {
               renderRooms(lastOverview);
             } else {
-              refreshAll();
+              refreshOverview();
             }
           });
 
@@ -2240,7 +2201,7 @@ OLD_INDEX_HTML = """<!DOCTYPE html>
             if (lastOverview) {
               renderRooms(lastOverview);
             } else {
-              refreshAll();
+              refreshOverview();
             }
           });
 
@@ -2253,7 +2214,7 @@ OLD_INDEX_HTML = """<!DOCTYPE html>
             if (lastOverview) {
               renderRooms(lastOverview);
             } else {
-              refreshAll();
+              refreshOverview();
             }
           });
         }
@@ -2269,17 +2230,24 @@ OLD_INDEX_HTML = """<!DOCTYPE html>
             if (autoRefreshEnabled) {
               refreshToggleBtn.classList.add('active');
               refreshToggleBtn.textContent = '每 5 秒自动刷新';
-              if (!refreshTimer) {
-                refreshTimer = setInterval(() => {
-                  refreshAll();
-                }, 5000);
+              // 恢复概览刷新
+              if (!overviewTimer) {
+                overviewTimer = setInterval(refreshOverview, OVERVIEW_INTERVAL);
+              }
+              // 恢复历史刷新
+              if (selectedRoomName) {
+                startHistoryPolling(selectedRoomName);
               }
             } else {
               refreshToggleBtn.classList.remove('active');
               refreshToggleBtn.textContent = '自动刷新已暂停';
-              if (refreshTimer) {
-                clearInterval(refreshTimer);
-                refreshTimer = null;
+              if (overviewTimer) {
+                clearInterval(overviewTimer);
+                overviewTimer = null;
+              }
+              if (historyTimer) {
+                clearInterval(historyTimer);
+                historyTimer = null;
               }
             }
           });
@@ -2287,7 +2255,8 @@ OLD_INDEX_HTML = """<!DOCTYPE html>
 
         if (refreshNowBtn) {
           refreshNowBtn.addEventListener('click', () => {
-            refreshAll();
+            refreshOverview();
+            if (selectedRoomName) loadHistoryForRoom(selectedRoomName, false);
           });
         }
       });
@@ -2319,9 +2288,12 @@ async def get_live_room_overview(
 
     items: List[schemas.LiveRoomOverview] = []
     for metric in latest_metrics:
-        recent_danmu_count = await crud.get_recent_danmu_count_for_room(
-            db, room_name=metric.room_name, within_minutes=10
-        )
+        # 仅"中国劲酒"启用弹幕采集，其他直播间不需要额外的弹幕统计查询
+        recent_danmu_count = 0
+        if metric.room_name == "中国劲酒":
+            recent_danmu_count = await crud.get_recent_danmu_count_for_room(
+                db, room_name=metric.room_name, within_minutes=10
+            )
 
         last_updated_at = (
             _as_utc(metric.created_at) if metric.created_at is not None else None

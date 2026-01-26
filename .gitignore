@@ -60,4 +60,12 @@ Thumbs.db
 htmlcov/
 
 # mypy
-.mypy_cache/.serena/
+.mypy_cache/
+
+# Claude AI
+.claude/
+CLAUDE.md
+**/CLAUDE.md
+
+# Ace Tool
+.ace-tool/
